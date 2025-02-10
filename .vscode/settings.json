@@ -1,0 +1,12 @@
+{
+	"files.associations": {
+		"math.h": "c",
+		"interrupt.h": "c",
+		"pwm.h": "c",
+		"adc.h": "c",
+		"io.h": "c",
+		"bitwise.h": "c",
+		"delay.h": "c",
+		"mymath.h": "c"
+	}
+}

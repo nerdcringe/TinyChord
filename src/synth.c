@@ -2,16 +2,24 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "pwm.h"
+#include "bitwise.h"
 
 /* Start timer0 interrupts and enable synthesis */
 void initSynth() {
 	disableSynth();
-	// Set up Timer/Counter0 for sample interrupt
-	TCCR0A = 3<<WGM00;                        // Fast PWM
-	TCCR0B = 1<<WGM02 | 1<<CS00;             // No prescale
-	TIMSK = 1<<OCIE0A;                       // Enable compare match, disable overflow
-	OCR0A = 121;                              // Divide by 61, giving us increments of about 1 Hz
-	enableSynth(); // allow interrupts
+	// WGM0[2:0] = 111 (Fast PWM, Enable compare match, disable overflow)
+	TCCR0A = setBit(TCCR0A, WGM00);
+	TCCR0A = setBit(TCCR0A, WGM01);
+	TCCR0B = setBit(TCCR0B, WGM02);
+
+	//CS0[2:0] = 001 (1:1 prescaling)
+	TCCR0B = setBit(TCCR0B, CS00);
+	//OCIE1A = 1 (Enable compare match, disable overflow)
+	TIMSK = setBit(TIMSK, OCIE0A);
+
+	// Divide by 61, giving us increments of about 1 Hz
+	OCR0A = 121;
+	enableSynth();
 }
 
 /* Disables synth output*/
