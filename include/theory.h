@@ -12,7 +12,7 @@
 #define Fs 740
 #define G 784
 #define Gs 831
-#define A8va 440
+#define A8va 880
 
 // Equivalent sharps and flats
 #define Ab Gs

@@ -3,4 +3,4 @@
 void initSynth();
 void disableSynth();
 void enableSynth();
-void setJump(uint16_t newJump);
+void setJump(uint8_t jumpIndex, uint32_t newJump);

@@ -2,11 +2,18 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#define NUM_VOICES 2
+
 /* Start timer0 interrupts and enable synthesis */
 void initSynth() {
 	disableSynth();
 	// Set up Timer/Counter1 for PWM output
 	// Register settings from http://www.technoblogy.com/show?20W6
+
+ 	// Timer interrupts OFF
+	TIMSK = 0;
+	//Enable 64 MHz PLL and use as source for Timer1
+	PLLCSR = 1<<PCKE | 1<<PLLE;
 	// PWM1A = 1 (PWM on comparator OCR1A, clear on match)
 	TCCR1 |= 1<<PWM1A;
 	// COM1A[1:0] = 10
@@ -14,7 +21,7 @@ void initSynth() {
 	// CS1[3:0] = 0001 (1:1 prescaling)
 	TCCR1 |= 1<<CS10;
 	// set data direction for pwm pin to output
-	DDRB |= 1<<PB1;
+	DDRB |= 1<<DDB1;
 
 	// WGM0[2:0] = 111 (Fast PWM, Enable compare match, disable overflow)
 	TCCR0A |= (1<<WGM02) | (1<<WGM01) | (1<<WGM00);
@@ -23,7 +30,7 @@ void initSynth() {
 	//OCIE1A = 1 (Enable compare match, disable overflow)
 	TIMSK |= 1<<OCIE0A;
 	// Divide by 61, giving us increments of about 1 Hz
-	OCR0A = 31;
+	OCR0A = 60;
 	enableSynth();
 }
 
@@ -44,13 +51,13 @@ void enableSynth() {
 }
 
 // Phase accumulator: keeps track of current phase of wave
-volatile uint16_t accumulator = 0;
+volatile uint16_t accumulator[NUM_VOICES] = {0};
 
  // How far to increment the corresponding phase accumulator
-volatile uint16_t jump = 440;
+volatile uint32_t jump[NUM_VOICES] = {0};
 
-void setJump(uint16_t newJump) {
-	jump = newJump;
+void setJump(uint8_t jumpIndex, uint32_t newJump) {
+	jump[jumpIndex] = newJump;
 }
 
 #define LUT_SIZE 128
@@ -68,9 +75,11 @@ const uint8_t sineLUT[LUT_SIZE] = {
 
 // Assembly may cause red underline in intellisense
 ISR(TIMER0_COMPA_vect) {
-	accumulator += jump;
-	uint8_t accum8Bit = accumulator >> 8;
-	uint8_t sample = 255;
-	sample = sineLUT[accum8Bit/2];
-	OCR1A = sample;
+	uint16_t sample = 0;
+	for (int i = 0; i < NUM_VOICES; i++) {
+		accumulator[i] += jump[i];
+		uint8_t accum8Bit = (uint8_t)(accumulator[i] >> 8);
+		sample += sineLUT[accum8Bit/2];
+	}
+	OCR1A = (uint8_t)(sample/NUM_VOICES);
 }

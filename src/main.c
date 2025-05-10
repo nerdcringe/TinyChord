@@ -43,6 +43,7 @@ int main () {
 	initSynth();
 	//initADC();
 	int noteFreq = 440;
+	int noteFreq2 = 440;
 	uint8_t minorPress;
 	
 	while (1) {
@@ -57,6 +58,7 @@ int main () {
 		} else {
 			enableSynth();
 			noteFreq = chords[(numPressed-1) % 7][0];
+			noteFreq2 = chords[(numPressed+1) % 7][0];
 		}
 /*
 		for (int i = 0; i < 256; i += STRUM_SIZE) {
@@ -64,7 +66,10 @@ int main () {
 				noteFreq *= 2;
 			}
 		}*/
-		setJump(noteFreq*16);
+		setJump(0, noteFreq*16);
+		setJump(1, noteFreq2*16);
+		//setJump(0, 440*8);
+		//setJump(1, 660*8);
 		//setJump(440*8);
 	}
 }
