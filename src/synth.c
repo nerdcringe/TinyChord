@@ -1,37 +1,46 @@
 #include "synth.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "pwm.h"
-#include "bitwise.h"
 
 /* Start timer0 interrupts and enable synthesis */
 void initSynth() {
 	disableSynth();
+	// Set up Timer/Counter1 for PWM output
+	// Register settings from http://www.technoblogy.com/show?20W6
+	// PWM1A = 1 (PWM on comparator OCR1A, clear on match)
+	TCCR1 |= 1<<PWM1A;
+	// COM1A[1:0] = 10
+	TCCR1 |= 1<<COM1A1;
+	// CS1[3:0] = 0001 (1:1 prescaling)
+	TCCR1 |= 1<<CS10;
+	// set data direction for pwm pin to output
+	DDRB |= 1<<PB1;
+
 	// WGM0[2:0] = 111 (Fast PWM, Enable compare match, disable overflow)
-	TCCR0A = setBit(TCCR0A, WGM00);
-	TCCR0A = setBit(TCCR0A, WGM01);
-	TCCR0B = setBit(TCCR0B, WGM02);
-
+	TCCR0A |= (1<<WGM02) | (1<<WGM01) | (1<<WGM00);
 	//CS0[2:0] = 001 (1:1 prescaling)
-	TCCR0B = setBit(TCCR0B, CS00);
+	TCCR0B |= 1<<CS00;
 	//OCIE1A = 1 (Enable compare match, disable overflow)
-	TIMSK = setBit(TIMSK, OCIE0A);
-
+	TIMSK |= 1<<OCIE0A;
 	// Divide by 61, giving us increments of about 1 Hz
-	OCR0A = 121;
+	OCR0A = 31;
 	enableSynth();
 }
 
 /* Disables synth output*/
 void disableSynth() {
-	// The IDE may see an error on cli() due to assembly code but it compiles 
+	// Intellisense may see an error on cli() due to assembly code but it compiles 
 	cli();
-	setDutyCycle(0);
+	OCR1A = 0;
+	TCCR1 &= ~(1<<CS10);
+	PORTB &= ~(1<<PB1);
 }
 
 /* Enables synth after it has been disabled (enabled by initSynth) */
 void enableSynth() {
-	sei();
+	DDRB |= (1<<PB1);
+	TCCR1 |= 1<<CS10;
+	sei(); 
 }
 
 // Phase accumulator: keeps track of current phase of wave
@@ -57,10 +66,11 @@ const uint8_t sineLUT[LUT_SIZE] = {
 	37, 42, 47, 52, 57, 62, 67, 73, 79, 85, 90, 97, 103, 109, 115, 121
 };
 
+// Assembly may cause red underline in intellisense
 ISR(TIMER0_COMPA_vect) {
 	accumulator += jump;
 	uint8_t accum8Bit = accumulator >> 8;
 	uint8_t sample = 255;
 	sample = sineLUT[accum8Bit/2];
-	setDutyCycle(sample);
+	OCR1A = sample;
 }
