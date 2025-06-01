@@ -2,7 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#define NUM_VOICES 2
+#define MAX_VOICES 3
 
 /* Start timer0 interrupts and enable synthesis */
 void initSynth() {
@@ -51,13 +51,15 @@ void enableSynth() {
 }
 
 // Phase accumulator: keeps track of current phase of wave
-volatile uint16_t accumulator[NUM_VOICES] = {0};
+volatile uint16_t accumulator[MAX_VOICES] = {0};
 
  // How far to increment the corresponding phase accumulator
-volatile uint32_t jump[NUM_VOICES] = {0};
+volatile uint32_t jump[MAX_VOICES] = {0};
 
 void setJump(uint8_t jumpIndex, uint32_t newJump) {
-	jump[jumpIndex] = newJump;
+	if (jumpIndex < MAX_VOICES) {
+		jump[jumpIndex] = newJump;
+	}
 }
 
 #define LUT_SIZE 128
@@ -76,10 +78,10 @@ const uint8_t sineLUT[LUT_SIZE] = {
 // Assembly may cause red underline in intellisense
 ISR(TIMER0_COMPA_vect) {
 	uint16_t sample = 0;
-	for (int i = 0; i < NUM_VOICES; i++) {
+	for (int i = 0; i < MAX_VOICES; i++) {
 		accumulator[i] += jump[i];
 		uint8_t accum8Bit = (uint8_t)(accumulator[i] >> 8);
 		sample += sineLUT[accum8Bit/2];
 	}
-	OCR1A = (uint8_t)(sample/NUM_VOICES);
+	OCR1A = (uint8_t)(sample>>2);
 }

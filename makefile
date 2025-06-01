@@ -4,7 +4,7 @@ PORT=COM3
 TARGET=attiny85
 
 IDIR = include
-CFLAGS = -I$(IDIR) -Os -mmcu=attiny85 -DF_CPU=8000000LU
+CFLAGS = -I$(IDIR) -Os -mmcu=attiny85 -DF_CPU=16000000LU
 ODIR = build
 
 main.hex: main.elf
