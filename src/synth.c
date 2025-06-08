@@ -2,7 +2,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#define MAX_VOICES 3
 
 /* Start timer0 interrupts and enable synthesis */
 void initSynth() {
@@ -37,33 +36,46 @@ void initSynth() {
 /* Disables synth output*/
 void disableSynth() {
 	// Intellisense may see an error on cli() due to assembly code but it compiles 
-	cli();
-	OCR1A = 0;
-	TCCR1 &= ~(1<<CS10);
-	PORTB &= ~(1<<PB1);
+	cli(); // Disable interrupts
+	OCR1A = 0; // Set PWM duty cycle to 0%
+	TCCR1 &= ~(1<<CS10); // Disable timer
+	PORTB &= ~(1<<PB1); // Set output LOW
 }
 
 /* Enables synth after it has been disabled (enabled by initSynth) */
 void enableSynth() {
-	DDRB |= (1<<PB1);
-	TCCR1 |= 1<<CS10;
-	sei(); 
+	//DDRB |= (1<<PB1); //
+	TCCR1 |= 1<<CS10; // Enable timer
+	sei();  // Enable interrupts
 }
 
-// Phase accumulator: keeps track of current phase of wave
-volatile uint16_t accumulator[MAX_VOICES] = {0};
 
- // How far to increment the corresponding phase accumulator
-volatile uint32_t jump[MAX_VOICES] = {0};
+// Determines the shape of the wave
+volatile uint8_t waveType = 0;
 
+// Set the wave shape based on the enumeration in the synth.h header
+void setWaveType(uint8_t _waveType) {
+	waveType = _waveType;
+}
+
+// Phase accumulator: keeps track of the phase of a wave
+// Array keeps track of multiple independent waves (up to MAX_FREQS)
+volatile uint16_t accumulator[MAX_FREQS] = {0};
+
+
+// Jump: How far to increment the corresponding phase accumulator
+// Jump is proportional to frequency with our register settings
+volatile uint32_t jump[MAX_FREQS] = {0};
+
+// Change the jump for a given phase accumulator
 void setJump(uint8_t jumpIndex, uint32_t newJump) {
-	if (jumpIndex < MAX_VOICES) {
+	if (jumpIndex < MAX_FREQS) {
 		jump[jumpIndex] = newJump;
 	}
 }
 
+// Calculating sine is too slow, so an approximation is read from lookup table
 #define LUT_SIZE 128
-
 const uint8_t sineLUT[LUT_SIZE] = {
 	128, 134, 140, 146, 152, 158, 165, 170, 176, 182, 188, 193, 198, 203, 208, 213,
 	218, 222, 226, 230, 234, 237, 240, 243, 245, 248, 250, 251, 253, 254, 254, 255,
@@ -75,13 +87,40 @@ const uint8_t sineLUT[LUT_SIZE] = {
 	37, 42, 47, 52, 57, 62, 67, 73, 79, 85, 90, 97, 103, 109, 115, 121
 };
 
-// Assembly may cause red underline in intellisense
+// Play a sample every few clock cycles (determined by clock divider OCR0A)
 ISR(TIMER0_COMPA_vect) {
-	uint16_t sample = 0;
-	for (int i = 0; i < MAX_VOICES; i++) {
+	uint16_t sample = 0; // PWM value to output to speaker
+
+	// Add each frequency to sample
+	for (int i = 0; i < MAX_FREQS; i++) {
+		// Move the sample forward by jump[i]
 		accumulator[i] += jump[i];
+		// Shift down 8 most-significant-bits to get 8 bit accumulator
 		uint8_t accum8Bit = (uint8_t)(accumulator[i] >> 8);
-		sample += sineLUT[accum8Bit/2];
+
+		// Choose the sample based on accumulator value wave type
+		if (waveType == SINE) {
+			// Read from sine lookup table
+			sample += sineLUT[accum8Bit/2];
+
+		} else if (waveType == TRIANGLE) {
+			if (accum8Bit < 128) {
+				sample += 2*accum8Bit; // Increase sample for first half
+			} else {
+				sample += 2*(255-accum8Bit); // Decrease sample for second half
+			}
+
+		} else if (waveType == SAWTOOTH) {
+			sample += accum8Bit; // Increasing value for whole period
+
+		} else if (waveType == SQUARE) {
+			// Constant high value for first half
+			if (accum8Bit < 128) {
+				sample += 255;
+			}
+			// Add nothing for second half
+		}
 	}
-	OCR1A = (uint8_t)(sample>>2);
+	// Set PWM duty cycle to the average sample value
+	OCR1A = (uint8_t)(sample/NUM_WAVE_TYPES);
 }

@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+// Delay between storing and returning analog value (in microseconds)
 #define READ_DELAY_US 100
 
 void initADC() {
@@ -15,6 +16,7 @@ void initADC() {
 	
 }
 
+// Read analog pin 0 (PB5)
 uint8_t readADC0() {
 	// ADMUX[1:0] = 00 (ADC0)
 	ADMUX &= ~(1<<MUX1);
@@ -24,6 +26,7 @@ uint8_t readADC0() {
 	return ADCH;
 }
 
+// Read analog pin 1 (PB2)
 uint8_t readADC1() {
 	// ADMUX[1:0] = 01 (ADC1)
 	ADMUX &= ~(1<<MUX1);
@@ -33,6 +36,7 @@ uint8_t readADC1() {
 	return ADCH;
 }
 
+// Read analog pin 2 (PB4)
 uint8_t readADC2() {
 	// ADMUX[1:0] = 10 (ADC2)
 	ADMUX |= (1<<MUX1);
@@ -42,6 +46,7 @@ uint8_t readADC2() {
 	return ADCH;
 }
 
+// Read analog pin 3 (PB3)
 uint8_t readADC3() {
 	// ADMUX[1:0] = 11 (ADC3)
 	ADMUX |= (1<<MUX1);
