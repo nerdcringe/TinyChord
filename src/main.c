@@ -34,8 +34,8 @@
 // This will change the inversion of the chord, making the notes higher or lower pitch
 // When the stylus is removed, then a pullup resistor pulls it HIGH.
 
-#define STRUM_THRESHOLD 220 // Assume the stylus is removed when analog value is above this
-#define NUM_INVERSIONS 16 // Total number of inversions
+#define STRUM_THRESHOLD 240 // Assume the stylus is removed when analog value is above this
+#define NUM_INVERSIONS 12 // Total number of inversions
 #define FREQ_SCALE 2 // Scale up by a power of 2 to raise the octave
 
 
@@ -44,11 +44,11 @@ int main () {
 	uint8_t incoming = 0; // Incoming bits from shift register
 	uint8_t btnCode = 0; // Binary representation of button state
 	uint8_t lastBtnCode = 0;
-	uint16_t currChord = 0; // Current chord number (1: I, 2: ii, 3: iii, 4: IV, etc...)
+	uint16_t currChord = 1; // Current chord number (1: I, 2: ii, 3: iii, 4: IV, etc...)
 	uint32_t currFreqs[MAX_FREQS] = {440, 440, 440, 440};
 	
 	uint16_t strumValue = 255; // Analog input value from stylus (determines inversions)
-	uint16_t lastStrumValue = 127; // Analog input value when stylus was last touching
+	uint16_t lastStrumValue = 96; // Analog input value when stylus was last touching
 	uint8_t keyOffset = 0; // # Steps to shift key
 	uint8_t waveType = 0; // Determine waveform type
 	bool keyBtnPressed = false;
@@ -85,7 +85,7 @@ int main () {
 				// worrying about releasing all buttons at the exact same time
 			btnCode > lastBtnCode) {
 				// Update the chord based on the binary number pressed
-				currChord = (btnCode-1) % 7;
+				currChord = btnCode;
 			}
 			enableSynth();
 		}
@@ -93,12 +93,30 @@ int main () {
 		// Find each frequency of the chord and put it in currFreqs array
 		for (uint8_t i = 0; i < MAX_FREQS; i++) { 
  			// Find # steps above the key center
-			uint8_t stepWithinKey = chordsNotes[currChord][i];
+			uint8_t stepWithinKey = chordsNotes[currChord-1][i];
+
+			if (i == 1 && CHECK_BIT(incoming, BTN_MAJ_MIN)) {
+				// Turn major chords minor
+				if (currChord == 1 || currChord == 4 || currChord == 5) {
+					stepWithinKey -= 1;
+				} else {
+					// Turn minor chords major
+					stepWithinKey += 1;
+				}
+			}
+
+			if (i == 3 && CHECK_BIT(incoming, BTN_FLAT7)) {
+				if (currChord == 1 || currChord == 4 || currChord == 5 || currChord == 7) {
+					stepWithinKey -= 1;
+				} else {
+					stepWithinKey += 1;
+				}
+			}
+
 			// Find the note by shifting based on the key center
-			// Fit within the 12-tone scale with modulo (%) operator
-			uint8_t freqIndex = (stepWithinKey + keyOffset) % 12;
-			// Convert note to frequency and scale to change octave
-			currFreqs[i] = noteToFreq[freqIndex] * FREQ_SCALE;
+			uint8_t freqIndex = stepWithinKey + keyOffset;
+			// Convert note to frequency and scale to change the octave
+			currFreqs[i] = noteToFreq[freqIndex % 12] * FREQ_SCALE;
 		}
 
 		// Start at high octave and invert (lower the highest note) recursively based on strum value

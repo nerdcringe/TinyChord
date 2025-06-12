@@ -16,7 +16,7 @@
 #define Gs 831
 
 // Put all frequencies in order.
-const uint16_t noteToFreq[12] = {2*A, As, B, C, Cs, D, Ds, E, F, Fs, G, Gs};
+const uint16_t noteToFreq[12] = {A, As, B, C, Cs, D, Ds, E, F, Fs, G, Gs};
 
 // Define indexes of the array as scale steps
 #define TONIC 0
