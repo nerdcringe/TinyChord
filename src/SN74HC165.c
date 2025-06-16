@@ -1,19 +1,20 @@
 #include "SN74HC165.h"
+#include "adc.h"
 #include <util/delay.h>
 
 #define CHECK_BIT(var,pos) (((var) & (1<<(pos))) > 0)
 
 uint8_t numBits;
-uint8_t data;
+//uint8_t data; NOW USING ADC ON RST PIN
 uint8_t clock;
 uint8_t latch;
 
-void initInputRegister(uint8_t _numBits, uint8_t _data, uint8_t _clock, uint8_t _latch) {
+void initInputRegister(uint8_t _numBits/*, uint8_t _data*/, uint8_t _clock, uint8_t _latch) {
 	numBits = _numBits;
-	data = _data;
+	//data = _data;
 	clock = _clock;
 	latch = _latch;
-	DDRB &= ~(1<<data); // Data is input
+	//DDRB &= ~(1<<data); // Data is input
 	DDRB |= (1<<clock); // Clock is output
 	DDRB |= (1<<latch); // Latch is output
 }
@@ -32,9 +33,14 @@ uint16_t readInputRegister() {
 		PORTB &= ~(1<<clock);
 
 		// Read current bit
-		if (CHECK_BIT(PINB, data)) {
+		//if (CHECK_BIT(PINB, data)) {
+
+		// Use ADC on reset pin for data input (use external pullup to keep it mostly high)
+		// Cannot go below 1.4V or else microcontroller will reset
+		if (readADC0() > 240) {
 			incoming |= (1<<i);
 		}
+		
 		PORTB |= (1<<clock); // set clock to 1 before next read
 	}
 	return incoming;

@@ -9,5 +9,5 @@
 
 #define LATCH_DELAY 0
 
-void initInputRegister(uint8_t numBits, uint8_t data, uint8_t clock, uint8_t latch);
+void initInputRegister(uint8_t numBits, /*uint8_t data, */uint8_t clock, uint8_t latch);
 uint16_t readInputRegister();

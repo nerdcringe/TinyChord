@@ -31,12 +31,13 @@ void initSynth() {
 	// Divide by 61, giving us increments of about 1 Hz
 	OCR0A = 60;
 	enableSynth();
+	sei(); // Set enable interrupts
 }
 
 /* Disables synth output*/
 void disableSynth() {
 	// Intellisense may see an error on cli() due to assembly code but it compiles 
-	cli(); // Disable interrupts
+	//cli(); // Disable interrupts
 	OCR1A = 0; // Set PWM duty cycle to 0%
 	TCCR1 &= ~(1<<CS10); // Disable timer
 	PORTB &= ~(1<<PB1); // Set output LOW
@@ -46,7 +47,7 @@ void disableSynth() {
 void enableSynth() {
 	//DDRB |= (1<<PB1); //
 	TCCR1 |= 1<<CS10; // Enable timer
-	sei();  // Enable interrupts
+	//sei();  // Set enable interrupts
 }
 
 

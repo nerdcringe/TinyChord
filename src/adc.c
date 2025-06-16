@@ -3,7 +3,7 @@
 #include <util/delay.h>
 
 // Delay between storing and returning analog value (in microseconds)
-#define READ_DELAY_US 100
+#define READ_DELAY_US 1
 
 void initADC() {
 	// ADLAR = 1 (Left adjust ADCH register)
